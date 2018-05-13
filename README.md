@@ -7,7 +7,7 @@ Select your .config, .xml or .json [settings file](https://github.com/KY-Program
 
 ## Features
 
-* [Connect to local generator service](https://github.com/KY-Programming/generator-vs-code/wiki/Connect-local-generator-service)
+* [Connect to local generator service](https://github.com/KY-Programming/generator-vs-code/wiki/Settings-File)
 
 ## Requirements
 
