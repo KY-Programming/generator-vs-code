@@ -20,3 +20,4 @@ All releases on [GitHub](https://github.com/KY-Programming/generator-vs-code/rel
 ## Issues
 Found a bug? Any problems or questions?
 [Get help here](https://github.com/KY-Programming/generator-vs-code/issues)
+
