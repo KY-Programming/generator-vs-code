@@ -38,22 +38,29 @@ export function activate(context: vscode.ExtensionContext) {
             const file = files[0];
             vscode.workspace.openTextDocument(file.fsPath).then(result => {
                 const content = result.getText();
-                debugger;
                 let url: string;
+                let strictSSL: boolean;
                 if (content[0] === '{') {
                     const configuration = JSON.parse(content);
                     url = configuration.Generator.Connection;
+                    strictSSL = configuration.Generator.VerifySsl;
                 }
                 else {
                     const start = content.indexOf('<Generator>') + 11;
                     const end = content.indexOf('</Generator>');
                     const generatorNode = content.substring(start, end);
                     const connectionStart = generatorNode.indexOf('<Connection>') + 12;
-                    const connectionEnd = generatorNode.indexOf('</Connection>');                    
+                    const connectionEnd = generatorNode.indexOf('</Connection>');
                     url = generatorNode.substring(connectionStart, connectionEnd).trim();
+                    const verifySslStart = generatorNode.indexOf('<VerifySsl>') + 11;
+                    const verifySslEnd = generatorNode.indexOf('</VerifySsl>');
+                    strictSSL = verifySslEnd === -1 || generatorNode.substring(verifySslStart, verifySslEnd).trim() !== 'false';
+                }
+                if (strictSSL === false) {
+                    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
                 }
                 let id: string;
-                http.post(url + '/Create', { configuration: content })
+                http.post(url + '/Create', { configuration: content, })
                     .then((response: any) => {
                         id = response.data;
                         return http.get(url + '/GetFiles/' + id);
@@ -76,10 +83,10 @@ export function activate(context: vscode.ExtensionContext) {
                                 });
                             promises.push(promise);
                         });
-                        return Promise.all(promises);
+                        return Promise.all(promises).then(() => filePaths.length);
                     })
-                    .then(() => {
-                        vscode.window.showInformationMessage('Done');
+                    .then((count: number) => {
+                        vscode.window.showInformationMessage(count + ' files generated');
                     })
                     .catch((error: Error) => {
                         vscode.window.showErrorMessage('Can not reach the generator server #231d\r\n' + error);
