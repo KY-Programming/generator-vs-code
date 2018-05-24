@@ -2,7 +2,7 @@
     "name": "ky-generator",
     "displayName": "KY-Generator",
     "description": "Visual Studio Code Extension for KY.Generator",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "publisher": "KY-Programming",
     "icon": "images/128.png",
     "repository": "https://github.com/KY-Programming/generator-vs-code",

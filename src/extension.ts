@@ -48,7 +48,17 @@ export function activate(context: vscode.ExtensionContext) {
                 else {
                     const start = content.indexOf('<Generator>') + 11;
                     const end = content.indexOf('</Generator>');
-                    const generatorNode = content.substring(start, end);
+                    let generatorNode = content.substring(start, end);
+                    while (true) {
+                        const commentStart = generatorNode.indexOf('<!--');
+                        const commentEnd = generatorNode.indexOf('-->');
+                        if (commentStart >= 0) {
+                            generatorNode = generatorNode.substring(0, commentStart) + generatorNode.substring(commentEnd + 3);
+                        }
+                        else {
+                            break;
+                        }
+                    }
                     const connectionStart = generatorNode.indexOf('<Connection>') + 12;
                     const connectionEnd = generatorNode.indexOf('</Connection>');
                     url = generatorNode.substring(connectionStart, connectionEnd).trim();
@@ -86,7 +96,9 @@ export function activate(context: vscode.ExtensionContext) {
                         return Promise.all(promises).then(() => filePaths.length);
                     })
                     .then((count: number) => {
-                        vscode.window.showInformationMessage(count + ' files generated');
+                        if (count > 0) {
+                            vscode.window.showInformationMessage(count + ' files generated');
+                        }
                     })
                     .catch((error: Error) => {
                         vscode.window.showErrorMessage('Can not reach the generator server #231d\r\n' + error);
