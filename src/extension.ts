@@ -2,7 +2,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-const http = require('axios');
+import http from 'axios';
 const fs = require("fs");
 
 // this method is called when your extension is activated
@@ -40,10 +40,12 @@ export function activate(context: vscode.ExtensionContext) {
                 const content = result.getText();
                 let url: string;
                 let strictSSL: boolean;
+                let noProxy: boolean;
                 if (content[0] === '{') {
                     const configuration = JSON.parse(content);
                     url = configuration.Generator.Connection;
                     strictSSL = configuration.Generator.VerifySsl;
+                    noProxy = configuration.Generation.NoProxy;
                 }
                 else {
                     const start = content.indexOf('<Generator>') + 11;
@@ -65,17 +67,25 @@ export function activate(context: vscode.ExtensionContext) {
                     const verifySslStart = generatorNode.indexOf('<VerifySsl>') + 11;
                     const verifySslEnd = generatorNode.indexOf('</VerifySsl>');
                     strictSSL = verifySslEnd === -1 || generatorNode.substring(verifySslStart, verifySslEnd).trim() !== 'false';
+                    const noProxyStart = generatorNode.indexOf('<NoProxy>');
+                    const noProxyEnd = generatorNode.indexOf('</NoProxy>');
+                    const noProxyStandalone = generatorNode.includes('<NoProxy/>') || generatorNode.includes('<NoProxy />');
+                    noProxy = noProxyStandalone || noProxyStart >= 0 && generatorNode.substring(noProxyStart + 9, noProxyEnd).trim() !== 'false';
                 }
                 if (strictSSL === false) {
                     process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
                 }
                 let id: string;
-                http.post(url + '/Create', { configuration: content, })
-                    .then((response: any) => {
+                const httpClient = http.create({
+                    baseURL: url,
+                    proxy: noProxy ? false : undefined
+                });
+                httpClient.post('/Create', { configuration: content })
+                    .then(response => {
                         id = response.data;
-                        return http.get(url + '/GetFiles/' + id);
+                        return httpClient.get('/GetFiles/' + id);
                     })
-                    .then((response: any) => {
+                    .then(response => {
                         const data = response.data as string;
                         if (!data) {
                             vscode.window.showErrorMessage('The generation is failed with an unkonw error #222d');
@@ -85,7 +95,9 @@ export function activate(context: vscode.ExtensionContext) {
                         const promises: any[] = [];
                         filePaths.forEach(filePath => {
                             const fullPath = currentDirectory.uri.fsPath + '\\' + filePath;
-                            const promise = http.get(url + '/GetFile/' + id + '?path=' + filePath)
+                            const directory = fullPath.substring(0, fullPath.lastIndexOf('\\'));
+                            fs.mkdir(directory);
+                            const promise = httpClient.get('/GetFile/' + id + '?path=' + filePath)
                                 .then((fileResponse: any) => {
                                     const content = fileResponse.data as string;
                                     fs.writeFile(fullPath, content);
@@ -93,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 });
                             promises.push(promise);
                         });
-                        return Promise.all(promises).then(() => filePaths.length);
+                        return <any>Promise.all(promises).then(() => filePaths.length);
                     })
                     .then((count: number) => {
                         if (count > 0) {
@@ -101,7 +113,11 @@ export function activate(context: vscode.ExtensionContext) {
                         }
                     })
                     .catch((error: Error) => {
-                        vscode.window.showErrorMessage('Can not reach the generator server #231d\r\n' + error);
+                        let details = '';
+                        if (error.message.includes('SSL23_GET_SERVER_HELLO')) {
+                            details = 'Try to disable proxy with <Generator><NoProxy />...\r\n\r\n';
+                        }
+                        vscode.window.showErrorMessage('Can not reach the generator server #231d\r\n' + details + error);
                     });
             });
         });
