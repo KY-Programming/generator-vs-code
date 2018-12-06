@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
         };
         vscode.window.showOpenDialog(options).then(files => {
             if (!files) {
-                vscode.window.showErrorMessage('No file selected. Generation aborted!');
+                vscode.window.showErrorMessage('No file selected. Generate aborted!');
                 return;
             }
             const file = files[0];
@@ -43,9 +43,13 @@ export function activate(context: vscode.ExtensionContext) {
                 let noProxy: boolean;
                 if (content[0] === '{') {
                     const configuration = JSON.parse(content);
+                    if (!configuration.Generator || !configuration.Generator) {
+                        vscode.window.showErrorMessage('Configuration has to contain setting Generator.Connection. Generate aborted!');
+                        return;
+                    }
                     url = configuration.Generator.Connection;
                     strictSSL = configuration.Generator.VerifySsl;
-                    noProxy = configuration.Generation.NoProxy;
+                    noProxy = configuration.Generator.NoProxy;
                 }
                 else {
                     const start = content.indexOf('<Generator>') + 11;
@@ -100,6 +104,10 @@ export function activate(context: vscode.ExtensionContext) {
                             const promise = httpClient.get('/GetFile/' + id + '?path=' + filePath)
                                 .then((fileResponse: any) => {
                                     const content = fileResponse.data as string;
+                                    const chunks = fullPath.split("\\");
+                                    for (let index = 2; index < chunks.length; index++) {
+                                        fs.mkdir(fullPath.split("\\").slice(0, index - chunks.length).join("\\"));
+                                    }
                                     fs.writeFile(fullPath, content);
                                     vscode.window.showInformationMessage(fullPath + ' updated');
                                 });
