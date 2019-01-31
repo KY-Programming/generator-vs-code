@@ -1,4 +1,4 @@
-# KY-Generator Visual Studio Code Extension
+# KY-Generator Visual Studio Code Extension ![](https://img.shields.io/visual-studio-marketplace/v/ky-programming.ky-generator.svg?style=flat)
 
 ## How to use
 Hit CTRL+SHIFT+P and enter KY-Generator to start the extension.
